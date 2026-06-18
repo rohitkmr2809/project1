@@ -21,6 +21,7 @@ export default function QuestionsList({
   const [query, setQuery] = useState("");
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -53,6 +54,28 @@ export default function QuestionsList({
 
     setQuestions((qs) => [{ ...created, votes: 0 }, ...qs]);
     setDraft("");
+  }
+
+  async function improveWithAI() {
+    if (!draft.trim() || isImproving) return;
+    setIsImproving(true);
+    try {
+      const res = await fetch("/api/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft }),
+      });
+      const data = await res.json();
+      if (data.improved) {
+        setDraft(data.improved);
+      } else {
+        alert(data.error || "Failed to improve draft.");
+      }
+    } catch (error) {
+      alert("Error communicating with AI.");
+    } finally {
+      setIsImproving(false);
+    }
   }
 
   async function upvote(id: string) {
@@ -98,12 +121,27 @@ export default function QuestionsList({
               placeholder="What's on your mind?"
               className="flex-1 rounded-xl bg-background/50 px-5 py-3.5 text-base outline-none placeholder:text-muted focus:bg-background border border-transparent focus:border-brand/50 transition-all shadow-inner"
             />
-            <button
-              onClick={submit}
-              className="rounded-xl bg-gradient-to-r from-brand-strong to-brand px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:-translate-y-0.5 hover:shadow-brand/40 active:translate-y-0"
-            >
-              Ask
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={improveWithAI}
+                disabled={isImproving || !draft.trim()}
+                className="rounded-xl border border-brand/30 bg-surface/80 px-4 py-3.5 text-sm font-semibold text-brand shadow-sm transition-all hover:bg-brand/10 disabled:opacity-50 flex items-center gap-2"
+              >
+                {isImproving ? (
+                  <svg className="animate-spin h-4 w-4 text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                )}
+                Improve
+              </button>
+              <button
+                onClick={submit}
+                disabled={!draft.trim()}
+                className="rounded-xl bg-gradient-to-r from-brand-strong to-brand px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:-translate-y-0.5 hover:shadow-brand/40 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-lg"
+              >
+                Ask
+              </button>
+            </div>
           </div>
         </div>
       </div>
